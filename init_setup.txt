@@ -1,0 +1,22 @@
+SEGUIR PASOS DEL PDF: Setup+de+proyectos-react-tdd.pdf
+
+
+
+1. 
+    npm i eslint-config-airbnb eslint-config-prettier eslint-plugin-jsx-a11y eslint-plugin-prettier prettier eslint-config-prettier typescript --save-dev
+
+2. 
+    .eslintrc =>  * Ya no se usa prettier/react (un prettier para todo, en caso sea Vue u otro)
+                    "extends": [
+                        "react-app",
+                        "airbnb",
+                        "plugin:jsx-a11y/recommended",
+                        "prettier",
+                        "eslint-config-prettier"
+                    ],
+
+3. 
+    .prettierrc
+
+4. 
+
