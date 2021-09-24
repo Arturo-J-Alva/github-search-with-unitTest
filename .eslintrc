@@ -11,6 +11,10 @@
         "prettier"
     ],
     "rules": {
+        "arrow-body-style": [
+            "error",
+            "always"
+        ],
         "react/react-in-jsx-scope": "off",
         "react/jsx-filename-extension": [
             1,
