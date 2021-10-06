@@ -5,8 +5,9 @@ import GitHubSearchPage from './GitHubSearchPage'
 
 import { rest } from 'msw'
 import { setupServer } from 'msw/node'
-import { getReposListBy, getReposPerPage, makeFakeRepo, makeFakeResponse } from '../../__fixtures__/repos'
+import { getReposListBy, makeFakeRepo, makeFakeResponse } from '../../__fixtures__/repos'
 import { OK_STATUS } from '../../consts'
+import { handlerPaginated } from '../../__fixtures__/handlers'
 
 const fakeResponse = makeFakeResponse({ totalCount: 1 })
 const fakeRepo = makeFakeRepo()
@@ -64,8 +65,11 @@ describe('When the GitHubSearchPAge is mounted', () => {
 
 describe("When the developer does a search", () => {
 
-
     test("The search button should be disabled until the search is done", async () => {
+
+        expect(buttonSearch).not.toBeDisabled()
+
+        fireEvent.change(screen.getByLabelText(/filter by/i), { target: { value: 'test' } })
 
         expect(buttonSearch).not.toBeDisabled()
 
@@ -133,17 +137,17 @@ describe("When the developer does a search", () => {
         expect(forks).toHaveTextContent(fakeRepo.forks_count)
         expect(openIssues).toHaveTextContent(fakeRepo.open_issues)
         expect(updatedAt).toHaveTextContent(fakeRepo.updated_at)
-
+        // screen.debug()
         expect(
             withTable
                 .getByText(fakeRepo.name)
-                .closest('a'))
+                /* .closest('a') */)
             .toHaveAttribute('href', fakeRepo.html_url)
 
         expect(avatarImg).toHaveAttribute('src', fakeRepo.owner.avatar_url)
     })
 
-    test('Must display thr total results number of the search and the current number of results', async () => {
+    test('Must display the total results number of the search and the current number of results', async () => {
         fireClickSearch()
         await screen.findByRole('table')
 
@@ -161,7 +165,6 @@ describe("When the developer does a search", () => {
 
         //const options = screen.getAllByRole('option')
         const listbox = screen.getByRole('listbox', { name: /rows per page:/i })
-
 
         const options = within(listbox).getAllByRole('option')
         expect(options).toHaveLength(3)
@@ -252,22 +255,10 @@ describe('When the developer types on filter by and does a search', () => {
 })
 
 describe('When the developer does a search and selects 50 rows per page', () => {
+
     test('Must fetch a new search and display 50 rows results on the table', async () => {
         //config mock server response
-        server.use(rest.get('/search/repositories', (req, res, ctx) => (
-            res(
-                ctx.status(OK_STATUS),
-                ctx.json(
-                    {
-                        ...makeFakeResponse(),
-                        items: getReposPerPage({
-                            perPage: Number(req.url.searchParams.get('per_page')),
-                            currentPage: req.url.searchParams.get('page')
-                        })
-                    }
-                )
-            )
-        )))
+        server.use(rest.get('/search/repositories', handlerPaginated))
 
         //click search
         fireClickSearch()
@@ -282,9 +273,37 @@ describe('When the developer does a search and selects 50 rows per page', () => 
         fireEvent.click(screen.getByRole('option', { name: '50' }))
 
         //expect 50 rows length
-        await waitFor(() => {
+        await waitFor(() => {//Debe de cambiar el dom ante de hacer un getAllByRole('row')
             expect(screen.getByRole('button', { name: /search/i })).not.toBeDisabled()
-        })
+        }, { timeout: 3000 })
         expect(screen.getAllByRole('row')).toHaveLength(51)
+    })
+})
+
+describe.only('When the developer clicks on search and then on next page button', () => {
+
+    test('Must display the next repositories page', async () => {
+        //config mock server response
+        server.use(rest.get('/search/repositories', handlerPaginated))
+
+        //click search
+        fireClickSearch()
+
+        //wait table
+        const table = await screen.findByRole('table')
+        expect(table).toBeInTheDocument()
+
+        //expect first repo name is from page 0
+        expect(screen.getByRole('cell', { name: /1-0/ })).toBeInTheDocument()
+
+        //expect next page is not disabled
+        const btnNext = screen.getByRole('button', { name: /next page/i })
+        expect(btnNext).not.toBeDisabled()
+
+        //click next page button
+        fireEvent.click(btnNext)
+
+        //wait search button is not disabled
+        expect(btnNext).toBeDisabled()
     })
 })

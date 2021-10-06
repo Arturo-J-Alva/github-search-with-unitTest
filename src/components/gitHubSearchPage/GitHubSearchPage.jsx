@@ -1,33 +1,34 @@
-import { Box, Button, Container, Grid, TextField, Typography } from "@material-ui/core"
+import { Box, Button, Container, Grid, TablePagination, TextField, Typography } from "@material-ui/core"
 import { useEffect, useState, useCallback, useRef } from "react"
 import { getRepos } from "../../services"
 import Content from "../content"
+import { GithubTable } from "../githubTable"
+
+const ROWS_PER_PAGE_DEFAULT = 30
 
 const GitHubSearchPage = () => {
 
     const [isSearching, setIsSearching] = useState(false)
     const [isSearchApplied, setIsSearchApplied] = useState(false)
     const [reposList, setReposList] = useState([])
-    const [searchBy, setSearchBy] = useState("")
-    const [rowsPerPage, setRowsPerPage] = useState(30)
+
+    const [rowsPerPage, setRowsPerPage] = useState(ROWS_PER_PAGE_DEFAULT)
+    const [currentPage, setCurrentPage] = useState(0)
 
     const didMount = useRef(false)
+    const searchByInput = useRef(null)
 
     const handleSearch = useCallback(async () => {
         setIsSearching(true)
         // await Promise.resolve()
-        const res = await getRepos({ q: searchBy, rowsPerPage })
+        const res = await getRepos({ q: searchByInput.current.value, rowsPerPage })
         const data = await res.json()
         // console.log("data:", data)
         setReposList(data.items)
 
         setIsSearching(false)
         setIsSearchApplied(true)
-    }, [searchBy, rowsPerPage])
-
-    const handlerChange = ({ target: { value } }) => {
-        setSearchBy(value)
-    }
+    }, [searchByInput, rowsPerPage])
 
     // trigger search
     useEffect(() => {
@@ -37,6 +38,14 @@ const GitHubSearchPage = () => {
         }
         handleSearch()
     }, [handleSearch])
+
+    const handleChangeRowsPage = (event) => {
+        setRowsPerPage(event.target.value)
+    }
+
+    const handleChangePage = (_, newPage) => {
+        setCurrentPage(newPage)
+    }
 
     return (
         <Container>
@@ -52,8 +61,7 @@ const GitHubSearchPage = () => {
                         label='Filter By'
                         id='filterBy'
                         fullWidth
-                        value={searchBy}
-                        onChange={handlerChange} />
+                        inputRef={searchByInput} />
                 </Grid>
                 {/* <label htmlFor="filterBy">Filter By</label>
             <input type="filterBy" id="filterBy" defaultValue="" /> */}
@@ -74,8 +82,22 @@ const GitHubSearchPage = () => {
                 <Content
                     isSearchApplied={isSearchApplied}
                     reposList={reposList}
-                    rowsPerPage={rowsPerPage}
-                    setRowsPerPage={setRowsPerPage} />
+                >
+                    <>
+                        <GithubTable
+                            reposList={reposList}
+                        />
+                        <TablePagination
+                            rowsPerPageOptions={[30, 50, 100]}
+                            component="div"
+                            count={1000}
+                            rowsPerPage={rowsPerPage}
+                            page={currentPage}
+                            onPageChange={handleChangePage}
+                            onRowsPerPageChange={handleChangeRowsPage}
+                        />
+                    </>
+                </Content>
             </Box>
 
         </Container>
