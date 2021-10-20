@@ -6,6 +6,10 @@ export const makeFakeResponse = ({ totalCount = 0 } = {}) => ({
     "items": []
 })
 
+export const makeFakeError = ({ message = 'Validation Failed' } = {}) => ({
+    message
+})
+
 export const makeFakeRepo = ({
     name = "113922675",
     id = '113922675'

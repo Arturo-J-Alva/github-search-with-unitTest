@@ -5,9 +5,8 @@ import GitHubSearchPage from './GitHubSearchPage'
 
 import { rest } from 'msw'
 import { setupServer } from 'msw/node'
-import { getReposListBy, makeFakeRepo, makeFakeResponse } from '../../__fixtures__/repos'
-import { OK_STATUS } from '../../consts'
-import { handlerPaginated } from '../../__fixtures__/handlers'
+import { getReposListBy, makeFakeError, makeFakeRepo, makeFakeResponse } from '../../__fixtures__/repos'
+import { OK_STATUS, UNEXPECTED_STATUS, UNPROCESSED_STATUS } from '../../consts'
 
 const fakeResponse = makeFakeResponse({ totalCount: 1 })
 const fakeRepo = makeFakeRepo()
@@ -150,7 +149,6 @@ describe("When the developer does a search", () => {
     test('Must display the total results number of the search and the current number of results', async () => {
         fireClickSearch()
         await screen.findByRole('table')
-
         expect(screen.getByText(/1-1 of 1/i)).toBeInTheDocument()
     })
 
@@ -254,56 +252,50 @@ describe('When the developer types on filter by and does a search', () => {
     })
 })
 
-describe('When the developer does a search and selects 50 rows per page', () => {
+describe('When there is  an  unexpected error from the backend', () => {
 
-    test('Must fetch a new search and display 50 rows results on the table', async () => {
-        //config mock server response
-        server.use(rest.get('/search/repositories', handlerPaginated))
+    test('Must display an alert message error with the message from the service 422', async () => {
 
-        //click search
-        fireClickSearch()
-        //expect 30 rows length
-        const table = await screen.findByRole('table')
-        expect(table).toBeInTheDocument()
-        const rows = await screen.findAllByRole('row')
-        expect(rows).toHaveLength(31)// considerando tambipen la fila cabecera
+        server.use(
+            rest.get('/search/repositories', (req, res, ctx) => (
+                res(
+                    ctx.status(UNPROCESSED_STATUS),
+                    ctx.json(makeFakeError())
+                )
+            )))
 
-        //select 50 per page
-        fireEvent.mouseDown(screen.getByLabelText(/rows per page/i)) // mouseDown: cuando se quita el click
-        fireEvent.click(screen.getByRole('option', { name: '50' }))
+        expect(
+            screen.queryByText(/validation failed/i)
+        ).not.toBeInTheDocument()
 
-        //expect 50 rows length
-        await waitFor(() => {//Debe de cambiar el dom ante de hacer un getAllByRole('row')
-            expect(screen.getByRole('button', { name: /search/i })).not.toBeDisabled()
-        }, { timeout: 3000 })
-        expect(screen.getAllByRole('row')).toHaveLength(51)
-    })
-})
-
-describe.only('When the developer clicks on search and then on next page button', () => {
-
-    test('Must display the next repositories page', async () => {
-        //config mock server response
-        server.use(rest.get('/search/repositories', handlerPaginated))
-
-        //click search
         fireClickSearch()
 
-        //wait table
-        const table = await screen.findByRole('table')
-        expect(table).toBeInTheDocument()
+        expect(
+            await screen.findByText(/validation failed/i)
+        ).toBeVisible()
 
-        //expect first repo name is from page 0
-        expect(screen.getByRole('cell', { name: /1-0/ })).toBeInTheDocument()
-
-        //expect next page is not disabled
-        const btnNext = screen.getByRole('button', { name: /next page/i })
-        expect(btnNext).not.toBeDisabled()
-
-        //click next page button
-        fireEvent.click(btnNext)
-
-        //wait search button is not disabled
-        expect(btnNext).toBeDisabled()
     })
+
+    test('Must display an alert message error with the message from the service 500', async () => {
+
+        server.use(
+            rest.get('/search/repositories', (req, res, ctx) => (
+                res(
+                    ctx.status(UNEXPECTED_STATUS),
+                    ctx.json(makeFakeError({ message: 'unexpected error' }))
+                )
+            )))
+
+        expect(
+            screen.queryByText(/unexpected error/i)
+        ).not.toBeInTheDocument()
+
+        fireClickSearch()
+
+        expect(
+            await screen.findByText(/unexpected error/i)
+        ).toBeVisible()
+
+    })
+
 })

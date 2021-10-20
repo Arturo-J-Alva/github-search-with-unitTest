@@ -42,7 +42,7 @@ export const GithubTable = ({ reposList }) => {
                             owner,
                             html_url: htmlUrl }) => {
                             return (
-                                <TableRow key={name}>
+                                <TableRow key={`${name}_${htmlUrl}`}>
                                     <TableCell>
                                         <Avatar src={owner.avatar_url} alt={name} />
                                         <Link href={htmlUrl} >{name}</Link>
